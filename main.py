@@ -1,5 +1,4 @@
 import sys
-# The fix: Adding 'campusflow.' prefix so python finds the files inside the folder
 from campusflow.tickets import create_ticket, ALLOWED_CATEGORIES, ALLOWED_URGENCIES
 from campusflow.workflow import assign, change_status, reopen
 from campusflow.reports import get_work_queue, get_summary
@@ -44,10 +43,10 @@ def handle_create(tickets):
 
     res = create_ticket(tickets, title, category, urgency, affected)
     if res["success"]:
-        print(f"\n✅ Ticket successfully created! Generated ID: {res['ticket']['id']} [Priority: {res['ticket']['priority']}]")
+        print(f"\n Ticket successfully created! Generated ID: {res['ticket']['id']} [Priority: {res['ticket']['priority']}]")
         save_tickets(DB_FILE, tickets)
     else:
-        print(f"\n❌ Error: {res['error']}")
+        print(f"\n Error: {res['error']}")
 
 def handle_assign(tickets):
     print_header("Assign Ticket to Staff")
@@ -55,10 +54,10 @@ def handle_assign(tickets):
     name = input("Enter staff name: ")
     try:
         assign(tickets, t_id, name)
-        print(f"\n✅ Ticket {t_id} successfully assigned to {name}.")
+        print(f"\n Ticket {t_id} successfully assigned to {name}.")
         save_tickets(DB_FILE, tickets)
     except ValueError as e:
-        print(f"\n❌ Workflow Error: {e}")
+        print(f"\n Workflow Error: {e}")
 
 def handle_status(tickets):
     print_header("Update Ticket Status")
@@ -66,20 +65,20 @@ def handle_status(tickets):
     new_status = input("Enter new status (in_progress / resolved): ")
     try:
         change_status(tickets, t_id, new_status)
-        print(f"\n✅ Ticket {t_id} successfully updated to '{new_status}'.")
+        print(f"\n Ticket {t_id} successfully updated to '{new_status}'.")
         save_tickets(DB_FILE, tickets)
     except ValueError as e:
-        print(f"\n❌ Workflow Error: {e}")
+        print(f"\n Workflow Error: {e}")
 
 def handle_reopen(tickets):
     print_header("Reopen Resolved Ticket")
     t_id = input("Enter Ticket ID: ")
     try:
         reopen(tickets, t_id)
-        print(f"\n✅ Ticket {t_id} successfully reopened to 'open'.")
+        print(f"\n Ticket {t_id} successfully reopened to 'open'.")
         save_tickets(DB_FILE, tickets)
     except ValueError as e:
-        print(f"\n❌ Workflow Error: {e}")
+        print(f"\n Workflow Error: {e}")
 
 def main():
     try:
@@ -119,7 +118,7 @@ def main():
             save_tickets(DB_FILE, tickets)
             sys.exit(0)
         else:
-            print("\n❌ Invalid choice. Please choose between 1 and 7.")
+            print("\n Invalid choice. Please choose between 1 and 7.")
 
 if __name__ == "__main__":
     main()
