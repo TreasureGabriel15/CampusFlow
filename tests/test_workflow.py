@@ -17,9 +17,21 @@ class TestWorkflow(unittest.TestCase):
         with self.assertRaises(ValueError):
             assign(self.tickets, "T001", "   ")
 
+    def test_cannot_assign_resolved_ticket(self):
+        before = self.tickets[2].copy()
+        with self.assertRaises(ValueError):
+            assign(self.tickets, "T003", "Charlie")
+        self.assertEqual(self.tickets[2], before)
+
     def test_change_status_valid_progression(self):
         ticket = change_status(self.tickets, "T002", "resolved")
         self.assertEqual(ticket["status"], "resolved")
+
+    def test_cannot_change_status_of_resolved_ticket(self):
+        before = self.tickets[2].copy()
+        with self.assertRaises(ValueError):
+            change_status(self.tickets, "T003", "open")
+        self.assertEqual(self.tickets[2], before)
 
     def test_cannot_skip_status_progression(self):
         with self.assertRaises(ValueError):
