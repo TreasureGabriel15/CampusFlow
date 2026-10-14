@@ -1,124 +1,149 @@
-import sys
-from campusflow.tickets import create_ticket, ALLOWED_CATEGORIES, ALLOWED_URGENCIES
+from campusflow.reports import get_summary, get_work_queue
+from campusflow.search import search_tickets
+from campusflow.storage import StorageError, load_tickets, save_tickets
+from campusflow.tickets import ALLOWED_CATEGORIES, ALLOWED_URGENCIES, create_ticket
+from campusflow.understanding_check import QUESTIONS, score_answers
 from campusflow.workflow import assign, change_status, reopen
-from campusflow.reports import get_work_queue, get_summary
-from campusflow.storage import load_tickets, save_tickets, StorageError
 
-DB_FILE = "tickets.json"
+DB = "tickets.json"
+STATUSES = ("open", "in_progress", "resolved")
+PRIORITIES = ("critical", "high", "medium", "low")
 
-def print_header(title):
-    print(f"\n=== {title.upper()} ===")
+def show(ticket):
+    who = ticket.get("assigned_to") or "Unassigned"
+    print(f"[{ticket['id']}] {ticket['title']} | {ticket['category']} | {ticket['priority']} | {ticket['status']} | {who}")
 
-def view_queue(tickets):
-    print_header("Work Queue (Sorted by Priority & ID)")
-    queue = get_work_queue(tickets)
-    if not queue:
-        print("No unresolved tickets found.")
+def find(tickets, ticket_id):
+    wanted = str(ticket_id).strip().upper()
+    for ticket in tickets:
+        if str(ticket.get("id", "")).upper() == wanted:
+            return ticket
+    raise ValueError(f"No ticket found with ID {wanted}.")
+
+def pick(label, allowed):
+    names = {item.casefold(): item for item in allowed}
+    while True:
+        raw = input(f"{label} (blank = any): ").strip()
+        if not raw:
+            return None
+        if raw.casefold() in names:
+            return names[raw.casefold()]
+        print("Choose:", ", ".join(allowed))
+
+def run(tickets, action):
+    try:
+        result = action()
+    except ValueError as error:
+        print(error)
+        return None
+    save_tickets(DB, tickets)
+    return result
+
+def create(tickets):
+    print("Categories:", ", ".join(ALLOWED_CATEGORIES))
+    print("Urgencies:", ", ".join(ALLOWED_URGENCIES))
+    result = create_ticket(tickets, input("Title: "), input("Category: "), input("Urgency: "), input("Affected users: "))
+    if not result["success"]:
+        print(result["error"])
         return
-    for t in queue:
-        print(f"[{t['id']}] {t['title']} | Priority: {t['priority'].upper()} | Status: {t['status']} | Assigned: {t.get('assigned_to') or 'Unassigned'}")
+    save_tickets(DB, tickets)
+    show(result["ticket"])
 
-def view_summary(tickets):
-    print_header("CampusFlow Operational Summary")
-    summary = get_summary(tickets)
-    print(f"Total Tickets Tracked: {summary['total']}")
-    print("\nBy Status:")
-    for status, count in summary['by_status'].items():
-        print(f"  - {status.replace('_', ' ').capitalize()}: {count}")
-    print("\nBy Priority:")
-    for priority, count in summary['by_priority'].items():
-        print(f"  - {priority.capitalize()}: {count}")
+def queue(tickets):
+    rows = get_work_queue(tickets)
+    if not rows:
+        print("No open tickets.")
+    for ticket in rows:
+        show(ticket)
 
-def handle_create(tickets):
-    print_header("Create New Support Ticket")
-    title = input("Enter problem title: ")
-    
-    print(f"Allowed Categories: {', '.join(ALLOWED_CATEGORIES)}")
-    category = input("Enter category: ")
-    
-    print(f"Allowed Urgencies: {', '.join(ALLOWED_URGENCIES)}")
-    urgency = input("Enter urgency: ")
-    
-    affected = input("Enter number of affected users: ")
+def report(tickets):
+    data = get_summary(tickets)
+    print(f"Total: {data['total']} | Unresolved: {data['unresolved']} | Resolved: {data['resolved']} ({data['resolution_percent']}%)")
+    print("Status:", data["by_status"])
+    print("Priority:", data["by_priority"])
+    print("Category:", data["by_category"])
 
-    res = create_ticket(tickets, title, category, urgency, affected)
-    if res["success"]:
-        print(f"\n Ticket successfully created! Generated ID: {res['ticket']['id']} [Priority: {res['ticket']['priority']}]")
-        save_tickets(DB_FILE, tickets)
-    else:
-        print(f"\n Error: {res['error']}")
+def search(tickets):
+    found = search_tickets(
+        tickets,
+        input("Title contains (blank = any): "),
+        pick("Category", ALLOWED_CATEGORIES),
+        pick("Status", STATUSES),
+        pick("Priority", PRIORITIES),
+    )
+    if not found:
+        print("No matching tickets.")
+    for ticket in found:
+        show(ticket)
 
-def handle_assign(tickets):
-    print_header("Assign Ticket to Staff")
-    t_id = input("Enter Ticket ID: ")
-    name = input("Enter staff name: ")
+def add_note(tickets):
     try:
-        assign(tickets, t_id, name)
-        print(f"\n Ticket {t_id} successfully assigned to {name}.")
-        save_tickets(DB_FILE, tickets)
-    except ValueError as e:
-        print(f"\n Workflow Error: {e}")
+        from campusflow.notes import add_note as add
+    except ImportError:
+        print("add_note is not ready yet. Your partner owns notes.py.")
+        return
+    ticket_id = input("Ticket ID: ")
+    note = run(tickets, lambda: add(tickets, ticket_id, input("Author: "), input("Message: ")))
+    if note:
+        print(f"Added {note['note_id']} to {ticket_id.strip().upper()}.")
 
-def handle_status(tickets):
-    print_header("Update Ticket Status")
-    t_id = input("Enter Ticket ID: ")
-    new_status = input("Enter new status (in_progress / resolved): ")
+def view_notes(tickets):
     try:
-        change_status(tickets, t_id, new_status)
-        print(f"\n Ticket {t_id} successfully updated to '{new_status}'.")
-        save_tickets(DB_FILE, tickets)
-    except ValueError as e:
-        print(f"\n Workflow Error: {e}")
+        notes = sorted((find(tickets, input("Ticket ID: ")).get("notes") or []), key=lambda note: note.get("note_id", ""))
+    except ValueError as error:
+        print(error)
+        return
+    if not notes:
+        print("No notes.")
+    for note in notes:
+        print(f"[{note['note_id']}] {note['author']}: {note['message']}")
 
-def handle_reopen(tickets):
-    print_header("Reopen Resolved Ticket")
-    t_id = input("Enter Ticket ID: ")
-    try:
-        reopen(tickets, t_id)
-        print(f"\n Ticket {t_id} successfully reopened to 'open'.")
-        save_tickets(DB_FILE, tickets)
-    except ValueError as e:
-        print(f"\n Workflow Error: {e}")
+def quiz(tickets):
+    answers = []
+    for number, question in enumerate(QUESTIONS, start=1):
+        print(f"\nQ{number}. {question['prompt']}")
+        for letter, text in question["choices"]:
+            print(f"  {letter}) {text}")
+        while (choice := input("A-D: ").strip().upper()) not in {"A", "B", "C", "D"}:
+            print("Enter A, B, C, or D.")
+        answers.append(choice)
+    print(f"Score: {score_answers(answers)}/6")
+    print("Explain two answers. These are not graded.")
+    print("1.", input("Explanation 1: ").strip())
+    print("2.", input("Explanation 2: ").strip())
 
 def main():
     try:
-        tickets = load_tickets(DB_FILE)
-    except StorageError as e:
-        print(f"Critical Database Error: {e}")
-        tickets = []
+        tickets = load_tickets(DB)
+    except StorageError as error:
+        print(error)
+        print("The file was not changed.")
+        return
 
+    actions = {
+        "1": queue,
+        "2": create,
+        "3": lambda rows: run(rows, lambda: assign(rows, input("Ticket ID: "), input("Staff name: "))),
+        "4": lambda rows: run(rows, lambda: change_status(rows, input("Ticket ID: "), input("New status: "))),
+        "5": lambda rows: run(rows, lambda: reopen(rows, input("Ticket ID: "))),
+        "6": report,
+        "7": search,
+        "8": add_note,
+        "9": view_notes,
+        "10": quiz,
+    }
     while True:
-        print("\n==============================")
-        print("   CAMPUSFLOW HELP DESK APP   ")
-        print("==============================")
-        print("1. View Priority Work Queue")
-        print("2. Create a Ticket")
-        print("3. Assign a Ticket")
-        print("4. Update Ticket Status")
-        print("5. Reopen a Ticket")
-        print("6. View System Summary Dashboard")
-        print("7. Exit")
-        
-        choice = input("\nSelect an option (1-7): ").strip()
-        
-        if choice == "1":
-            view_queue(tickets)
-        elif choice == "2":
-            handle_create(tickets)
-        elif choice == "3":
-            handle_assign(tickets)
-        elif choice == "4":
-            handle_status(tickets)
-        elif choice == "5":
-            handle_reopen(tickets)
-        elif choice == "6":
-            view_summary(tickets)
-        elif choice == "7":
-            print("\nSaving database... Goodbye!")
-            save_tickets(DB_FILE, tickets)
-            sys.exit(0)
-        else:
-            print("\n Invalid choice. Please choose between 1 and 7.")
+        print("\n1 Queue  2 Create  3 Assign  4 Status  5 Reopen")
+        print("6 Report  7 Search  8 Add note  9 View notes  10 Quiz  11 Exit")
+        choice = input("Choice: ").strip()
+        if choice == "11":
+            save_tickets(DB, tickets)
+            print("Saved. Goodbye.")
+            break
+        if choice not in actions:
+            print("Choose 1-11.")
+            continue
+        actions[choice](tickets)
 
 if __name__ == "__main__":
     main()
