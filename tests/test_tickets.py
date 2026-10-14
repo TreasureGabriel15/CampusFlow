@@ -71,6 +71,18 @@ class TestCreateTicket(unittest.TestCase):
         result = create_ticket([], "X", "network", "high", "3.5")
         self.assertFalse(result["success"])
 
+    def test_numeric_fraction_users_rejected_without_mutation(self):
+        tickets = []
+        result = create_ticket(tickets, "X", "network", "high", 3.5)
+        self.assertFalse(result["success"])
+        self.assertEqual(tickets, [])
+
+    def test_boolean_users_rejected_without_mutation(self):
+        tickets = []
+        result = create_ticket(tickets, "X", "network", "high", True)
+        self.assertFalse(result["success"])
+        self.assertEqual(tickets, [])
+
     def test_ids_increment(self):
         tickets = []
         create_ticket(tickets, "A", "network", "high", "1")
