@@ -11,9 +11,27 @@ def get_work_queue(tickets):
 def get_summary(tickets):
     by_status = {"open": 0, "in_progress": 0, "resolved": 0}
     by_priority = {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    by_category = {}
+
     for ticket in tickets:
         if ticket.get("status") in by_status:
             by_status[ticket["status"]] += 1
         if ticket.get("priority") in by_priority:
             by_priority[ticket["priority"]] += 1
-    return {"total": len(tickets), "by_status": by_status, "by_priority": by_priority}
+        category = ticket.get("category")
+        if category:
+            by_category[category] = by_category.get(category, 0) + 1
+
+    total = len(tickets)
+    resolved = by_status["resolved"]
+    percent = round(resolved / total * 100) if total else 0
+
+    return {
+        "total": total,
+        "unresolved": total - resolved,
+        "resolved": resolved,
+        "resolution_percent": percent,
+        "by_status": by_status,
+        "by_priority": by_priority,
+        "by_category": by_category,
+    }
