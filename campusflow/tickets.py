@@ -52,6 +52,8 @@ def create_ticket(tickets, title, category, urgency, affected_users):
             "success": False,
             "error": f"Urgency must be one of {ALLOWED_URGENCIES}"
         }
+    if isinstance(affected_users, bool) or not isinstance(affected_users, (str, int)):
+        return {"success": False, "error": "People affected must be a whole number"}
     try:
         affected_users = int(affected_users)
     except (ValueError, TypeError):
