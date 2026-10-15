@@ -42,7 +42,22 @@ def run(tickets, action):
 def create(tickets):
     print("Categories:", ", ".join(ALLOWED_CATEGORIES))
     print("Urgencies:", ", ".join(ALLOWED_URGENCIES))
-    result = create_ticket(tickets, input("Title: "), input("Category: "), input("Urgency: "), input("Affected users: "))
+    title = input("Title: ")
+    category = input("Category: ")
+    urgency = input("Urgency: ")
+    raw_affected_users = input("Affected users: ").strip()
+    try:
+        affected_users = int(raw_affected_users)
+    except ValueError:
+        print("People affected must be a positive whole number.")
+        return
+    result = create_ticket(
+        tickets,
+        title,
+        category,
+        urgency,
+        affected_users,
+    )
     if not result["success"]:
         print(result["error"])
         return
