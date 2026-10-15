@@ -32,7 +32,7 @@ class TestCreateTicket(unittest.TestCase):
 
     def test_create_valid_ticket(self):
         tickets = []
-        result = create_ticket(tickets, "Wi-Fi down", "network", "HIGH", "15")
+        result = create_ticket(tickets, "Wi-Fi down", "network", "HIGH", 15)
         self.assertTrue(result["success"])
         t = result["ticket"]
         self.assertEqual(t["id"], "T001")
@@ -44,23 +44,23 @@ class TestCreateTicket(unittest.TestCase):
         self.assertEqual(len(tickets), 1)
 
     def test_blank_title_rejected(self):
-        result = create_ticket([], "   ", "network", "high", "5")
+        result = create_ticket([], "   ", "network", "high", 5)
         self.assertFalse(result["success"])
 
     def test_invalid_category_rejected(self):
-        result = create_ticket([], "X", "banana", "high", "5")
+        result = create_ticket([], "X", "banana", "high", 5)
         self.assertFalse(result["success"])
 
     def test_invalid_urgency_rejected(self):
-        result = create_ticket([], "X", "network", "urgent", "5")
+        result = create_ticket([], "X", "network", "urgent", 5)
         self.assertFalse(result["success"])
 
     def test_zero_users_rejected(self):
-        result = create_ticket([], "X", "network", "high", "0")
+        result = create_ticket([], "X", "network", "high", 0)
         self.assertFalse(result["success"])
 
     def test_negative_users_rejected(self):
-        result = create_ticket([], "X", "network", "high", "-3")
+        result = create_ticket([], "X", "network", "high", -3)
         self.assertFalse(result["success"])
 
     def test_non_numeric_users_rejected(self):
@@ -68,7 +68,7 @@ class TestCreateTicket(unittest.TestCase):
         self.assertFalse(result["success"])
 
     def test_decimal_users_rejected(self):
-        result = create_ticket([], "X", "network", "high", "3.5")
+        result = create_ticket([], "X", "network", "high", 3.5)
         self.assertFalse(result["success"])
 
     def test_numeric_fraction_users_rejected_without_mutation(self):
@@ -83,10 +83,58 @@ class TestCreateTicket(unittest.TestCase):
         self.assertFalse(result["success"])
         self.assertEqual(tickets, [])
 
+    def test_numeric_string_users_rejected_without_mutation(self):
+        tickets = [{"id": "T009", "title": "Existing"}]
+        before = [ticket.copy() for ticket in tickets]
+        result = create_ticket(tickets, "X", "network", "high", "3")
+        self.assertFalse(result["success"])
+        self.assertEqual(tickets, before)
+
+    def test_invalid_creation_keeps_entire_collection_unchanged(self):
+        tickets = [{"id": "T009", "title": "Existing", "notes": [{"note_id": "N001"}]}]
+        before = [{"id": "T009", "title": "Existing", "notes": [{"note_id": "N001"}]}]
+        result = create_ticket(tickets, "X", "network", "high", 0)
+        self.assertFalse(result["success"])
+        self.assertEqual(tickets, before)
+
+    def test_invalid_create_inputs_leave_existing_collection_unchanged(self):
+        invalid_inputs = (
+            (" ", "Network", "low", 2),
+            ("Title", "Invalid", "low", 2),
+            ("Title", "Network", "urgent", 2),
+            ("Title", "Network", "low", "2"),
+        )
+        for title, category, urgency, affected_users in invalid_inputs:
+            with self.subTest(
+                title=title,
+                category=category,
+                urgency=urgency,
+                affected_users=affected_users,
+            ):
+                tickets = [
+                    {
+                        "id": "T009",
+                        "title": "Existing",
+                        "notes": [{"note_id": "N001", "message": "Keep me"}],
+                    }
+                ]
+                before = [
+                    {
+                        "id": "T009",
+                        "title": "Existing",
+                        "notes": [{"note_id": "N001", "message": "Keep me"}],
+                    }
+                ]
+                result = create_ticket(
+                    tickets, title, category, urgency, affected_users
+                )
+                self.assertFalse(result["success"])
+                self.assertEqual(tickets, before)
+
     def test_ids_increment(self):
         tickets = []
-        create_ticket(tickets, "A", "network", "high", "1")
-        create_ticket(tickets, "B", "network", "high", "1")
+        create_ticket(tickets, "A", "network", "high", 1)
+        create_ticket(tickets, "B", "network", "high", 1)
         self.assertEqual(tickets[0]["id"], "T001")
         self.assertEqual(tickets[1]["id"], "T002")
 

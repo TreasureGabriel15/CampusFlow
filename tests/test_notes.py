@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 from campusflow.notes import add_note
@@ -32,19 +33,19 @@ class TestAddNote(unittest.TestCase):
         self.assertEqual(second["note_id"], "N002")
 
     def test_reject_note_on_resolved_ticket_without_mutation(self):
-        before = [ticket.copy() for ticket in self.tickets]
+        before = copy.deepcopy(self.tickets)
         with self.assertRaises(ValueError):
             add_note(self.tickets, "T003", "Alice", "Follow-up")
         self.assertEqual(self.tickets, before)
 
     def test_reject_blank_author_without_mutation(self):
-        before = [ticket.copy() for ticket in self.tickets]
+        before = copy.deepcopy(self.tickets)
         with self.assertRaises(ValueError):
             add_note(self.tickets, "T001", " ", "Message")
         self.assertEqual(self.tickets, before)
 
     def test_reject_blank_message_without_mutation(self):
-        before = [ticket.copy() for ticket in self.tickets]
+        before = copy.deepcopy(self.tickets)
         with self.assertRaises(ValueError):
             add_note(self.tickets, "T001", "Alice", " ")
         self.assertEqual(self.tickets, before)
@@ -66,7 +67,7 @@ class TestAddNote(unittest.TestCase):
         self.assertEqual(len(note["message"]), 300)
 
     def test_reject_unknown_ticket_without_mutation(self):
-        before = [ticket.copy() for ticket in self.tickets]
+        before = copy.deepcopy(self.tickets)
         with self.assertRaises(ValueError):
             add_note(self.tickets, "T999", "Alice", "Message")
         self.assertEqual(self.tickets, before)
