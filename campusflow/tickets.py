@@ -1,3 +1,13 @@
+from campusflow.validation import (
+    ALLOWED_CATEGORIES,
+    ALLOWED_URGENCIES,
+    validate_affected_users,
+    validate_category,
+    validate_title,
+    validate_urgency,
+)
+
+
 def calculate_priority(urgency, affected_users):
     """
     Rules (first match wins):
@@ -31,35 +41,14 @@ def find_ticket(tickets, ticket_id):
     return None
 
 
-ALLOWED_CATEGORIES = ["Network", "Hardware", "Software", "Other"]
-ALLOWED_URGENCIES = ["low", "medium", "high"]
-
-
 def create_ticket(tickets, title, category, urgency, affected_users):
- 
-    title = str(title).strip()
-    if not title:
-        return {"success": False, "error": "Title cannot be blank"}
-    category = str(category).strip().capitalize()
-    if category not in ALLOWED_CATEGORIES:
-        return {
-            "success": False,
-            "error": f"Category must be one of {ALLOWED_CATEGORIES}"
-        }
-    urgency = str(urgency).strip().lower()
-    if urgency not in ALLOWED_URGENCIES:
-        return {
-            "success": False,
-            "error": f"Urgency must be one of {ALLOWED_URGENCIES}"
-        }
-    if isinstance(affected_users, bool) or not isinstance(affected_users, (str, int)):
-        return {"success": False, "error": "People affected must be a whole number"}
     try:
-        affected_users = int(affected_users)
-    except (ValueError, TypeError):
-        return {"success": False, "error": "People affected must be a whole number"}
-    if affected_users <= 0:
-        return {"success": False, "error": "People affected must be positive"}
+        title = validate_title(title)
+        category = validate_category(category)
+        urgency = validate_urgency(urgency)
+        affected_users = validate_affected_users(affected_users)
+    except ValueError as error:
+        return {"success": False, "error": str(error)}
 
     priority = calculate_priority(urgency, affected_users)
     new_id = next_ticket_id(tickets)
