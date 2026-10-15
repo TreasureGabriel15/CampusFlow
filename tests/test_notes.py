@@ -2,6 +2,7 @@ import copy
 import unittest
 
 from campusflow.notes import add_note
+from campusflow.workflow import assign, change_status, reopen
 
 
 class TestAddNote(unittest.TestCase):
@@ -31,6 +32,23 @@ class TestAddNote(unittest.TestCase):
         second = add_note(self.tickets, "T001", "Bob", "Second")
         self.assertEqual(first["note_id"], "N001")
         self.assertEqual(second["note_id"], "N002")
+
+    def test_notes_survive_resolution_and_reopening(self):
+        assign(self.tickets, "T001", "Alice")
+        change_status(self.tickets, "T001", "in_progress")
+        first_note = add_note(self.tickets, "T001", "Alice", "First update")
+        change_status(self.tickets, "T001", "resolved")
+        resolved_notes = copy.deepcopy(self.tickets[0]["notes"])
+
+        with self.assertRaises(ValueError):
+            add_note(self.tickets, "T001", "Bob", "Follow-up update")
+        self.assertEqual(self.tickets[0]["notes"], resolved_notes)
+
+        reopen(self.tickets, "T001")
+        second_note = add_note(self.tickets, "T001", "Bob", "Follow-up update")
+
+        self.assertEqual(self.tickets[0]["notes"], [first_note, second_note])
+        self.assertEqual([note["note_id"] for note in self.tickets[0]["notes"]], ["N001", "N002"])
 
     def test_reject_note_on_resolved_ticket_without_mutation(self):
         before = copy.deepcopy(self.tickets)
