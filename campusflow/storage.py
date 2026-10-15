@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 
@@ -16,6 +17,25 @@ def load_tickets(path):
         raise StorageError(f"Could not read {file_path.name}: file is not valid JSON.") from exc
     if not isinstance(data, list):
         raise StorageError(f"Could not read {file_path.name}: tickets must be a JSON list.")
+
+    
+    seen_ids = set()
+    for index, ticket in enumerate(data):
+        if not isinstance(ticket, dict):
+            raise StorageError(
+                f"Could not read {file_path.name}: ticket {index + 1} must be a JSON object."
+            )
+        ticket_id = ticket.get("id")
+        if not isinstance(ticket_id, str) or not re.fullmatch(r"T\d+", ticket_id, re.IGNORECASE):
+            raise StorageError(
+                f"Could not read {file_path.name}: ticket {index + 1} has an invalid ID."
+            )
+        normalized_id = ticket_id.upper()
+        if normalized_id in seen_ids:
+            raise StorageError(
+                f"Could not read {file_path.name}: duplicate ticket ID {normalized_id}."
+            )
+        seen_ids.add(normalized_id)
     return data
 
 

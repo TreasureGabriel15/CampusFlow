@@ -27,5 +27,24 @@ class TestStorage(unittest.TestCase):
         with self.assertRaises(StorageError):
             load_tickets(self.test_file)
 
+    def test_non_object_ticket_raises_storage_error(self):
+        self.test_file.write_text(json.dumps([None]))
+        with self.assertRaises(StorageError):
+            load_tickets(self.test_file)
+
+    def test_invalid_ticket_id_raises_storage_error(self):
+        self.test_file.write_text(json.dumps([{"id": "invalid"}]))
+        with self.assertRaises(StorageError):
+            load_tickets(self.test_file)
+
+    def test_duplicate_ticket_ids_raise_without_replacing_memory(self):
+        self.test_file.write_text(json.dumps([{"id": "T001"}, {"id": "t001"}]))
+        tickets = [{"id": "T009", "title": "Keep this ticket"}]
+
+        with self.assertRaises(StorageError):
+            tickets[:] = load_tickets(self.test_file)
+
+        self.assertEqual(tickets, [{"id": "T009", "title": "Keep this ticket"}])
+
 if __name__ == "__main__":
     unittest.main()
