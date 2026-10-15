@@ -1,10 +1,7 @@
-_NEXT = {"open": "in_progress", "in_progress": "resolved"}
+from campusflow.validation import validate_staff_name, validate_status
 
-def _status(value):
-    text = "_".join(str(value).strip().lower().replace("-", " ").replace("_", " ").split())
-    if text not in {"open", "in_progress", "resolved"}:
-        raise ValueError("Status must be open, in_progress, or resolved.")
-    return text
+
+_NEXT = {"open": "in_progress", "in_progress": "resolved"}
 
 def _find(tickets, ticket_id):
     wanted = str(ticket_id or "").strip().upper()
@@ -22,16 +19,13 @@ def _unlocked(ticket):
 def assign(tickets, ticket_id, staff_name):
     ticket = _find(tickets, ticket_id)
     _unlocked(ticket)
-    name = staff_name.strip() if isinstance(staff_name, str) else ""
-    if not name:
-        raise ValueError("Staff name cannot be blank.")
-    ticket["assigned_to"] = name
+    ticket["assigned_to"] = validate_staff_name(staff_name)
     return ticket
 
 def change_status(tickets, ticket_id, new_status):
     ticket = _find(tickets, ticket_id)
     _unlocked(ticket)
-    status = _status(new_status)
+    status = validate_status(new_status)
     if _NEXT.get(ticket.get("status")) != status:
         raise ValueError(f"Cannot move '{ticket.get('status')}' straight to '{status}'.")
     if status == "in_progress" and not str(ticket.get("assigned_to") or "").strip():
