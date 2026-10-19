@@ -1,6 +1,6 @@
 # AI Learning Log
 
-**Documentation owner (Engineer A):** Gabriel Odeh
+**Engineer A:** Gabriel Odeh
 
 This is a concise summary of the team's recorded AI-assisted work. Contributor credits are unchanged.
 
@@ -12,7 +12,6 @@ This is a concise summary of the team's recorded AI-assisted work. Contributor c
 
 The implementation and test details are recorded in the project source and test suite.
 
-## Engineer B — CampusFlow Next
 
 **Engineer B:** Treasure Gabriel
 

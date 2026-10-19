@@ -10,6 +10,7 @@
 | Calculate priority from urgency and affected-user count. | The rules are consistent and covered by tests. High urgency affecting at least 10 people is critical; high urgency or at least 10 people is high; medium urgency or at least 3 people is medium; otherwise it is low. |
 | Validate tickets and notes when loading saved data. | Invalid records, duplicate IDs, and inconsistent priority should not enter the application. |
 | Keep note IDs sequential within each ticket and prevent notes on resolved tickets. | Updates stay associated with their ticket, and resolved tickets remain locked until reopened. |
+
 **Engineer B:** Treasure Gabriel
 
 | Decision | Reason |
